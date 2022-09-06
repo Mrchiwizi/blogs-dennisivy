@@ -1,22 +1,24 @@
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from . models import Room, Topic
+from . models import Room, Topic, Message
 from django.db.models import Q
 from . forms import RoomForm
 
 
 # Create your views here.
 def loginPage(request):
+    page = 'login'
 
     if request.user.is_authenticated:
         return redirect('home')
         
     if request.method == 'POST':
-        username = request.POST.get('username')
+        username = request.POST.get('username').lower()
         password = request.POST.get('password')
 
         try:
@@ -32,7 +34,7 @@ def loginPage(request):
         else:
             messages.error(request, 'Username Or Password mismatch')
 
-    context = {}
+    context = {'page':page}
     return render(request,'base/login_register.html', context)
 
 
@@ -40,6 +42,26 @@ def loginPage(request):
 def logoutUser(request):
     logout(request)
     return redirect('home')
+
+
+
+def registerPage(request):
+    form = UserCreationForm()
+
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.username = user.username.lower()
+            user.save()
+            login(request, user)
+            return redirect('home')
+        else:
+            messages.error(request, 'There was a problem registering this user')
+
+
+    context = {'form':form}
+    return render(request, 'base/login_register.html', context)
 
 
 
@@ -73,7 +95,19 @@ def home(request):
 
 def room(request, pk):
     room = Room.objects.get(id=pk)
-    context = {'room':room}
+
+    room_messages = room.message_set.all().order_by('-created')
+
+    if request.method == 'POST':
+        user = request.user
+        body = request.POST.get('body')
+        room = room
+
+        Message.objects.create(user=user, body=body, room=room)
+
+        return redirect('room', pk=room.id)
+
+    context = {'room':room, 'room_messages':room_messages}
     return render(request, 'base/room.html', context)
 
 
