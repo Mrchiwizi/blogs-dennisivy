@@ -98,16 +98,20 @@ def room(request, pk):
 
     room_messages = room.message_set.all().order_by('-created')
 
+    participants = room.participants.all()
+
     if request.method == 'POST':
         user = request.user
         body = request.POST.get('body')
         room = room
 
-        Message.objects.create(user=user, body=body, room=room)
+        message = Message.objects.create(user=user, body=body, room=room)
+
+        room.participants.add(request.user)
 
         return redirect('room', pk=room.id)
 
-    context = {'room':room, 'room_messages':room_messages}
+    context = {'room':room, 'room_messages':room_messages, 'participants':participants}
     return render(request, 'base/room.html', context)
 
 
@@ -158,3 +162,17 @@ def deleteRoom(request, pk):
 
     context = {'obj':room}
     return render(request, 'base/delete.html',context)
+
+
+
+def deleteMessage(request, pk):
+    message = Message.objects.get(id=pk)
+
+    if request.user != message.user:
+        return HttpResponse('You are not allowed here!!')
+
+    if request.method == 'POST':
+        message.delete()
+        return redirect('home')
+
+    return render(request, 'base/delete.html', {'obj':message})
