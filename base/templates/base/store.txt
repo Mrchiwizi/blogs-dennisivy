@@ -1,0 +1,11 @@
+<!-- {% extends 'main.html' %}
+
+{% block content %}
+
+{% for message in messages %}
+<div>
+    {{ message }} - {{ message.user }}
+</div>
+{% endfor %}
+
+{% endblock %} -->
